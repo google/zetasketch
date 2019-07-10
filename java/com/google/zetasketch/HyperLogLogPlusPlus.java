@@ -165,9 +165,9 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
 
   /**
    * Adds {@code value} to the aggregator. This provides a performance optimization over {@link
-   * #add(V)} to avoid unnecessary boxing.
+   * #add(Object)} to avoid unnecessary boxing.
    *
-   * @see #add(V)
+   * @see #add(Object)
    */
   public void add(int value) throws IllegalArgumentException {
     checkAndSetType(Type.INTEGER);
@@ -176,9 +176,9 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
 
   /**
    * Adds {@code value} to the aggregator. This provides a performance optimization over {@link
-   * #add(V)} to avoid unnecessary boxing.
+   * #add(Object)} to avoid unnecessary boxing.
    *
-   * @see #add(V)
+   * @see #add(Object)
    */
   public void add(long value) throws IllegalArgumentException {
     checkAndSetType(Type.LONG);
@@ -187,9 +187,9 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
 
   /**
    * Adds {@code value} to the aggregator. This provides a performance optimization over {@link
-   * #add(V)} to avoid unnecessary boxing.
+   * #add(Object)} to avoid unnecessary boxing.
    *
-   * @see #add(V)
+   * @see #add(Object)
    */
   public void add(byte[] value) throws IllegalArgumentException {
     checkAndSetType(Type.BYTES);
@@ -370,8 +370,9 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
   /**
    * Builder for new {@link HyperLogLogPlusPlus} aggregators.
    *
-   * <p>Optional parameters are set with {@link #normalPrecision()} and {@link #sparsePrecision()}.
-   * The mandatory type parameter is set by invoking any of the {@code buildFor<Type>} methods.
+   * <p>Optional parameters are set with {@link #normalPrecision(int)} and {@link
+   * #sparsePrecision(int)}. The mandatory type parameter is set by invoking any of the {@code
+   * buildFor<Type>} methods.
    *
    * <p>Builders with the precision set can be reused to build multiple aggregators.
    */
@@ -402,7 +403,7 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
     /**
      * Sets the sparse precision to be used. Must be in the range from the {@code normalPrecision}
      * to {@link #MAXIMUM_SPARSE_PRECISION} (inclusive), or {@link #SPARSE_PRECISION_DISABLED} to
-     * disable the use of the sparse representation. We recommend to use {@link #noSparseMode() for
+     * disable the use of the sparse representation. We recommend to use {@link #noSparseMode()} for
      * the latter, though.
      *
      * <p>If not specified, the normal precision + {@link #DEFAULT_SPARSE_PRECISION_DELTA} is used.

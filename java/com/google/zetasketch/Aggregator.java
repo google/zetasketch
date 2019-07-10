@@ -98,8 +98,8 @@ public interface Aggregator<V, R, A extends Aggregator<V, R, A>> {
    * Returns the internal state of the aggregator as a protocol buffer. The returned value can be
    * passed in to {@link #merge(AggregatorStateProto)}.
    *
-   * <p>It may be faster to call {@link #serializeToByteArray()} or {@link #serializeToByteString()}
-   * directly instead of {@code aggregator.serializeToProto().toByteArray()} or {@code
+   * <p>It may be faster to call {@link #serializeToByteString()} directly instead of {@code
+   * aggregator.serializeToProto().toByteArray()} or {@code
    * aggregator.serializeToProto().toByteString()} as it permits aggregators to implement
    * performance improvements that do not use the default proto serializer.
    */

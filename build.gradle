@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-apply plugin: 'java'
-apply plugin: 'com.google.protobuf'
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+    id 'com.github.johnrengelman.shadow' version '5.1.0'
+    id 'com.google.protobuf' version '0.8.9'
+}
 
 // Customize source code layout
 sourceSets {
     main {
         java {
             srcDirs = ['java']
+            exclude 'com/google/zetasketch/testing/**'
         }
         proto {
             srcDirs = ['proto']
@@ -29,49 +35,140 @@ sourceSets {
     }
     test {
         java {
-            srcDirs = ['javatests']
+            srcDirs = ['java/com/google/zetasketch/testing', 'javatests']
         }
     }
 }
 
-buildscript {
-  repositories {
-    mavenCentral()
-  }
-  dependencies {
-    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.6'
-  }
-}
-
-// Declare where to find the dependencies of the project
+// Configure where to find the dependencies of the project
 repositories {
     mavenCentral()
 }
 
-/*
-// Print Java compiler warnings
-tasks.withType(JavaCompile) {
-  options.compilerArgs << "-Xlint"
+protobuf {
+    // Configure the protoc executable
+    protoc {
+        // Download pre-compiled protoc
+        artifact = 'com.google.protobuf:protoc:3.6.0'
+    }
 }
-*/
 
-// Declare the dependencies for production and test code
+// Configure the dependencies for production and test code
 dependencies {
-    compile 'com.google.auto.value:auto-value:1.5.3'
+    annotationProcessor 'com.google.auto.value:auto-value:1.5.3'
+    compile 'com.google.auto.value:auto-value-annotations:1.6.3'
     compile 'com.google.code.findbugs:jsr305:3.0.2'
-    compile 'com.google.errorprone:error_prone_annotations:2.0.15'
-    compile 'com.google.guava:guava:27.0-jre'
-    compile 'com.google.protobuf:protobuf-java:3.5.1'
-    compile 'com.google.truth:truth:0.45'
+    compile 'com.google.errorprone:error_prone_annotations:2.3.2'
+    compile 'com.google.guava:guava:28.0-jre'
+    compile 'com.google.protobuf:protobuf-java:3.6.0'
     compile 'it.unimi.dsi:fastutil:8.2.2'
-    compile 'org.checkerframework:checker-qual:2.5.7'
+    compile 'org.checkerframework:checker-qual:2.8.1'
+    testCompile 'com.google.truth:truth:0.45'
     testCompile 'com.google.truth.extensions:truth-proto-extension:0.45'
     testCompile 'junit:junit:4.13-beta-1'
 }
 
-protobuf {
-  protoc {
-    // The artifact spec for the Protobuf Compiler
-    artifact = 'com.google.protobuf:protoc:3.6.0'
-  }
+// ----------------------------------------------------------------------------
+// Configuration below are only used for publishing shaded artifacts to Maven
+// ----------------------------------------------------------------------------
+
+def shade = { 'com.google.zetasketch.shaded.' + it }
+
+shadowJar {
+    dependencies {
+        // Shade guava and some of its transitive dependencies
+        include(dependency('com.google.guava:.*:.*'))
+        include(dependency('com.google.j2objc:j2objc-annotations:.*'))
+        include(dependency('org.codehaus.mojo:animal-sniffer-annotations:.*'))
+
+        // Shade protobuf
+        include(dependency('com.google.protobuf:protobuf-java:.*'))
+    }
+    // guava uses namespaces 'com.google.common' and 'com.google.thirdparty'
+    relocate 'com.google.common', shade('com.google.common')
+    relocate 'com.google.thirdparty', shade('com.google.thirdparty')
+    relocate 'com.google.j2objc', shade('com.google.j2objc')
+    relocate 'org.codehaus.mojo', shade('org.codehaus.mojo')
+    relocate 'com.google.protobuf', shade('com.google.protobuf')
+
+    classifier = null  // was configured to 'all'
+}
+
+// The other dependencies are not shaded and will be included in pom.xml
+dependencies {
+    shadow 'com.google.auto.value:auto-value-annotations:1.6.3'
+    shadow 'com.google.code.findbugs:jsr305:3.0.2'
+    shadow 'com.google.errorprone:error_prone_annotations:2.3.2'
+    shadow 'it.unimi.dsi:fastutil:8.2.2'
+    shadow 'org.checkerframework:checker-qual:2.8.1'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    from sourceSets.main.proto
+    archiveClassifier = 'sources'
+}
+
+javadoc {
+    // Include proto-generated Java classes because they are exposed at the API
+    source "${buildDir}/generated/source/proto/main/java"
+    // Exclude classes in internal/ because users should not use them directly
+    exclude 'com/google/zetasketch/internal/**'
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+publishing {
+    publications {
+        shaded(MavenPublication) {
+            // groupId, artifactId and version are defined in gradle.properties
+
+            // primary artifact: the production Jar
+            project.shadow.component(it)
+
+            // secondary artifact: the source code Jar and javadoc Jar
+            artifact sourcesJar
+            artifact javadocJar
+
+            // Provide the information in pom.xml required by
+            // https://central.sonatype.org/pages/requirements.html
+            pom {
+                name = 'ZetaSketch'
+                description = 'A collection of libraries for single-pass, distributed, sublinear-space approximate aggregation and sketching algorithms.'
+                url = 'https://github.com/google/zetasketch'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        name = 'The ZetaSketch Team'
+                        email = 'noreply+zetasketch@google.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/google/zetasketch.git'
+                    developerConnection = 'scm:git:ssh://github.com/google/zetasketch.git'
+                    url = 'https://github.com/google/zetasketch/tree/master'
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+            def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.shaded
 }
