@@ -16,6 +16,11 @@
 
 package com.google.zetasketch;
 
+import com.esotericsoftware.kryo.DefaultSerializer;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.FieldSerializer;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
@@ -31,6 +36,9 @@ import com.google.zetasketch.internal.hllplus.Representation;
 import com.google.zetasketch.internal.hllplus.SparseRepresentation;
 import com.google.zetasketch.internal.hllplus.State;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -459,4 +467,65 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
       return new HyperLogLogPlusPlus<>(buildState(DefaultOpsType.Id.BYTES_OR_UTF8_STRING));
     }
   }
+
+  @Override
+  public String toString() {
+    return "HyperLogLogPlusPlus {" +
+            "allowedTypes=" + allowedTypes +
+            ", numValues=" + state.numValues +
+            ", estimate=" + longResult() +
+            '}';
+  }
+
+  // Used only when deserializing
+  private HyperLogLogPlusPlus() {
+    state = new State();
+    allowedTypes = Type.extractAndNormalize(state);
+  }
+
+  public static class KryoSerializer extends FieldSerializer<HyperLogLogPlusPlus> {
+    public KryoSerializer(Kryo kryo, Class<?> type) {
+      super(kryo, type);
+    }
+
+    @Override
+    public void write(Kryo kryo, Output output, HyperLogLogPlusPlus hll) {
+      byte[] bytes = hll.serializeToByteArray();
+      output.writeInt(bytes.length);
+      output.write(bytes);
+    }
+
+    @Override
+    public HyperLogLogPlusPlus<?> read(Kryo kryo, Input input, Class<HyperLogLogPlusPlus> type) {
+      int bytesSize = input.readInt();
+      byte[] bytes = new byte[bytesSize];
+      int realLength = input.read(bytes);
+      if (realLength != bytesSize) {
+        throw new IllegalArgumentException("De-serialization failed.");
+      }
+      return HyperLogLogPlusPlus.forProto(bytes);
+    }
+  }
+
+  private void writeObject(ObjectOutputStream output) throws IOException {
+    byte[] bytes = serializeToByteArray();
+    output.writeInt(bytes.length);
+    output.write(bytes);
+  }
+
+  private void readObject(ObjectInputStream input) throws IOException {
+    int bytesSize = input.readInt();
+    byte[] bytes = new byte[bytesSize];
+    int realLength = input.read(bytes);
+
+    if (realLength != bytesSize) {
+      throw new IllegalArgumentException("De-serialization failed.");
+    }
+
+    state.parse(bytes);
+    allowedTypes.clear();
+    allowedTypes.addAll(Type.extractAndNormalize(state));
+    representation = Representation.fromState(state);
+  }
+
 }
