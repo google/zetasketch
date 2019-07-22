@@ -20,6 +20,9 @@
 **/.gradletasknamecache
 **/gradle-app.setting
 
+# Ignore Maven build directories
+target/**
+
 # Ignore IntelliJ files.
 **/.idea/**/*
 **/out/**/*
