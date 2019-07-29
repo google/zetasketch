@@ -16,7 +16,9 @@
 
 # How to Contribute
 
-We are not currently accepting contributions to this project.
+We are not currently accepting contributions to this project. Please feel free
+to file bugs and feature requests using
+[GitHub's issue tracker](https://github.com/google/zetasketch/issues/new).
 
 ## Community Guidelines
 
