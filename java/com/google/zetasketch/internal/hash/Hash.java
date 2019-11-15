@@ -16,9 +16,6 @@
 
 package com.google.zetasketch.internal.hash;
 
-import com.google.common.hash.HashFunction;
-import java.nio.charset.StandardCharsets;
-
 /**
  * Library to compute standard 64 bit hashes for values.
  *
@@ -26,30 +23,17 @@ import java.nio.charset.StandardCharsets;
  * languages, in particular C++ and Go. This is important so that aggregators that use hashes
  * produce {@code AggregatorStateProto}s that are exchangeable between different implementations.
  */
-public final class Hash {
-
-  private static final HashFunction FINGERPRINT_2011 = new Fingerprint2011();
-
+public interface Hash {
   /** Returns the 64 bit hash of the byte array value. */
-  public static long of(byte[] value) {
-    return FINGERPRINT_2011.hashBytes(value).asLong();
-  }
+  public long of(byte[] value); 
 
   /** Returns the 64 bit hash of the integer value. */
-  public static long of(int value) {
-    return FINGERPRINT_2011.hashInt(value).asLong();
-  }
+  public long of(int value);
 
   /** Returns the 64 bit hash of the long value. */
-  public static long of(long value) {
-    return FINGERPRINT_2011.hashLong(value).asLong();
-  }
+  public long of(long value); 
 
   /** Returns the 64 bit hash of the String value. */
-  public static long of(String value) {
-    return FINGERPRINT_2011.hashString(value, StandardCharsets.UTF_8).asLong();
-  }
-
-  // Utility class.
-  private Hash() {}
+  public long of(String value);
 }
+

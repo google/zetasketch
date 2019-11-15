@@ -17,6 +17,7 @@
 package com.google.zetasketch;
 
 import com.google.common.base.Preconditions;
+
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.ExtensionRegistry;
@@ -25,6 +26,7 @@ import com.google.protos.zetasketch.Aggregator.AggregatorStateProto;
 import com.google.protos.zetasketch.Aggregator.AggregatorType;
 import com.google.protos.zetasketch.Aggregator.DefaultOpsType;
 import com.google.protos.zetasketch.HllplusUnique;
+import com.google.zetasketch.internal.hash.DefaultHash;
 import com.google.zetasketch.internal.hash.Hash;
 import com.google.zetasketch.internal.hllplus.NormalRepresentation;
 import com.google.zetasketch.internal.hllplus.Representation;
@@ -97,12 +99,34 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
   }
 
   /**
+   * Creates a new HyperLogLog++ aggregator from {@code proto}. Note that this method is quite
+   * inefficient as it will re-serialize the proto in order to parse it into an internal structure.
+   * It is preferable to use {@link #forProto(byte[])}
+   * whenever possible.
+   *
+   * @param proto a valid aggregator state of type {@link AggregatorType#HYPERLOGLOG_PLUS_UNIQUE}.
+   */
+  public static HyperLogLogPlusPlus<?> forProto(AggregatorStateProto proto, Hash hash) {
+    return forProto(proto.toByteArray(), hash);
+  }
+
+    /**
    * Creates a new HyperLogLog++ aggregator from the serialized {@code proto}.
    *
    * @param proto a valid aggregator state of type {@link AggregatorType#HYPERLOGLOG_PLUS_UNIQUE}.
    */
   public static HyperLogLogPlusPlus<?> forProto(ByteString proto) {
-    return forProto(proto.newCodedInput());
+    return forProto(proto.newCodedInput(), DefaultHash.HASH);
+  }
+
+
+  /**
+   * Creates a new HyperLogLog++ aggregator from the serialized {@code proto}.
+   *
+   * @param proto a valid aggregator state of type {@link AggregatorType#HYPERLOGLOG_PLUS_UNIQUE}.
+   */
+  public static HyperLogLogPlusPlus<?> forProto(ByteString proto, Hash hash) {
+    return forProto(proto.newCodedInput(), hash);
   }
 
   /**
@@ -114,18 +138,38 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
    * it to this method.
    *
    * @param proto a valid aggregator state of type {@link AggregatorType#HYPERLOGLOG_PLUS_UNIQUE}.
+   * @param hash a custom hashing function.
    */
   public static HyperLogLogPlusPlus<?> forProto(byte[] proto) {
-    return forProto(CodedInputStream.newInstance(proto));
+    return forProto(CodedInputStream.newInstance(proto), DefaultHash.HASH);
   }
 
-  private static HyperLogLogPlusPlus<?> forProto(CodedInputStream proto) {
+    /**
+   * Creates a new HyperLogLog++ aggregator from the serialized {@code proto}.
+   *
+   * <p><strong>Important:</strong> while the aggregator will never modify the byte array it may
+   * retain a reference to its data for a long time if no write operations are called. Clients
+   * wishing to make changes to the buffer should make a defensive copy of the data before passing
+   * it to this method.
+   *
+   * @param proto a valid aggregator state of type {@link AggregatorType#HYPERLOGLOG_PLUS_UNIQUE}.
+   * @param hash a custom hashing function.
+   */
+  public static HyperLogLogPlusPlus<?> forProto(byte[] proto, Hash hash) {
+    return forProto(CodedInputStream.newInstance(proto), hash);
+  }
+
+  private static HyperLogLogPlusPlus<?> forProto(CodedInputStream proto, Hash hash) {
     try {
       // Enable aliasing if possible to avoid unnecessary data copies. This is safe since the
       // ByteSlice used in the State employs copy-on-write.
       State state = new State();
       proto.enableAliasing(true);
       state.parse(proto);
+      if (state.valueType.asDefaultOpsType() != DefaultOpsType.Id.UNKNOWN && hash != DefaultHash.HASH) {
+        throw new IllegalArgumentException("You cannot use a custom hash function for a standard value type.");
+      }
+      state.hash = hash;
       return new HyperLogLogPlusPlus<>(state);
     } catch (IOException e) {
       throw new IllegalArgumentException(e);
@@ -171,7 +215,7 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
    */
   public void add(int value) throws IllegalArgumentException {
     checkAndSetType(Type.INTEGER);
-    addHash(Hash.of(value));
+    addHash(state.hash.of(value));
   }
 
   /**
@@ -182,7 +226,7 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
    */
   public void add(long value) throws IllegalArgumentException {
     checkAndSetType(Type.LONG);
-    addHash(Hash.of(value));
+    addHash(state.hash.of(value));
   }
 
   /**
@@ -193,14 +237,14 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
    */
   public void add(byte[] value) throws IllegalArgumentException {
     checkAndSetType(Type.BYTES);
-    addHash(Hash.of(value));
+    addHash(state.hash.of(value));
   }
 
   @Override
   public void add(V value) throws IllegalArgumentException {
     if (value instanceof String) {
       checkAndSetType(Type.STRING);
-      addHash(Hash.of((String) value));
+      addHash(state.hash.of((String) value));
     } else if (value instanceof ByteString) {
       add(((ByteString) value).toByteArray());
     } else if (value instanceof Integer) {
@@ -216,6 +260,14 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
   private void addHash(long hash) {
     representation = representation.addHash(hash);
     state.numValues++;
+  }
+
+  /**
+   * Returns the ValueType of this aggregator.
+   *
+   */
+  public ValueType getValueType() {
+    return state.valueType;
   }
 
   /**
@@ -237,20 +289,20 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
   @Override
   public void merge(AggregatorStateProto proto) throws IllegalArgumentException {
     if (proto != null) {
-      checkTypeAndMerge(HyperLogLogPlusPlus.forProto(proto));
+      checkTypeAndMerge(HyperLogLogPlusPlus.forProto(proto, state.hash));
     }
   }
 
   public void merge(byte[] proto) {
     if (proto != null && proto.length > 0) {
-      checkTypeAndMerge(HyperLogLogPlusPlus.forProto(proto));
+      checkTypeAndMerge(HyperLogLogPlusPlus.forProto(proto, state.hash));
     }
   }
 
   @Override
   public void merge(ByteString proto) {
     if (proto != null && !proto.isEmpty()) {
-      checkTypeAndMerge(HyperLogLogPlusPlus.forProto(proto));
+      checkTypeAndMerge(HyperLogLogPlusPlus.forProto(proto, state.hash));
     }
   }
 
@@ -329,7 +381,6 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
     if (allowedTypes.size() > 1) {
       allowedTypes.clear();
       allowedTypes.add(type);
-      state.valueType = type.valueType;
     }
   }
 
@@ -342,10 +393,6 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
 
     /** Returns the permissible types for the given state. */
     public static Set<Type> extractAndNormalize(State state) {
-      if (state.valueType.equals(ValueType.UNKNOWN)) {
-        return EnumSet.allOf(Type.class);
-      }
-
       switch (state.valueType.asDefaultOpsType()) {
         case UINT64:
           return EnumSet.of(LONG);
@@ -354,9 +401,8 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
         case BYTES_OR_UTF8_STRING:
           return EnumSet.of(STRING, BYTES);
         default:
-          // Not supported - fall through to throw.
+          return EnumSet.allOf(Type.class);
       }
-      throw new IllegalArgumentException("Unsupported value type " + state.valueType);
     }
 
     /** The {@link ValueType} corresponding to this aggregator type. */
@@ -423,11 +469,12 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
       return sparsePrecision(SPARSE_PRECISION_DISABLED);
     }
 
-    private State buildState(DefaultOpsType.Id opsType) {
+    private State buildState(ValueType valueType, Hash hash) {
       State state = new State();
       state.type = AggregatorType.HYPERLOGLOG_PLUS_UNIQUE;
       state.encodingVersion = ENCODING_VERSION;
       state.precision = normalPrecision;
+      state.hash = hash;
 
       // If sparse precision is not explicitly set, use default offset from normal precision.
       state.sparsePrecision =
@@ -435,28 +482,35 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
               ? sparsePrecision
               : normalPrecision + DEFAULT_SPARSE_PRECISION_DELTA;
 
-      state.valueType = ValueType.forStandardType(opsType);
+      state.valueType = valueType;
       return state;
+    }
+
+    public <T> HyperLogLogPlusPlus<T> buildCustom(ValueType valueType, Hash hash) {
+      if (valueType.asDefaultOpsType() != DefaultOpsType.Id.UNKNOWN) {
+        throw new IllegalArgumentException("You cannot use reserved value type " + valueType + " for custom HyperLogLog.");
+      }
+      return new HyperLogLogPlusPlus<T>(buildState(valueType, hash));
     }
 
     /** Returns a new HLL++ aggregator for counting the number of unique byte arrays in a stream. */
     public HyperLogLogPlusPlus<ByteString> buildForBytes() {
-      return new HyperLogLogPlusPlus<>(buildState(DefaultOpsType.Id.BYTES_OR_UTF8_STRING));
+      return new HyperLogLogPlusPlus<>(buildState(ValueType.forStandardType(DefaultOpsType.Id.BYTES_OR_UTF8_STRING), DefaultHash.HASH));
     }
 
     /** Returns a new HLL++ aggregator for counting the number of unique integers in a stream. */
     public HyperLogLogPlusPlus<Integer> buildForIntegers() {
-      return new HyperLogLogPlusPlus<>(buildState(DefaultOpsType.Id.UINT32));
+      return new HyperLogLogPlusPlus<>(buildState(ValueType.forStandardType(DefaultOpsType.Id.UINT32), DefaultHash.HASH));
     }
 
     /** Returns a new HLL++ aggregator for counting the number of unique longs in a stream. */
     public HyperLogLogPlusPlus<Long> buildForLongs() {
-      return new HyperLogLogPlusPlus<>(buildState(DefaultOpsType.Id.UINT64));
+      return new HyperLogLogPlusPlus<>(buildState(ValueType.forStandardType(DefaultOpsType.Id.UINT64), DefaultHash.HASH));
     }
 
     /** Returns a new HLL++ aggregator for counting the number of unique strings in a stream. */
     public HyperLogLogPlusPlus<String> buildForStrings() {
-      return new HyperLogLogPlusPlus<>(buildState(DefaultOpsType.Id.BYTES_OR_UTF8_STRING));
+      return new HyperLogLogPlusPlus<>(buildState(ValueType.forStandardType(DefaultOpsType.Id.BYTES_OR_UTF8_STRING), DefaultHash.HASH));
     }
   }
 }

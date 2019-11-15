@@ -18,17 +18,17 @@ package com.google.zetasketch.internal.hllplus;
 
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.UnknownFieldSet;
 import com.google.protobuf.WireFormat;
 import com.google.protos.zetasketch.Aggregator.AggregatorStateProto;
 import com.google.protos.zetasketch.Aggregator.AggregatorType;
-import com.google.protos.zetasketch.Aggregator.DefaultOpsType;
 import com.google.protos.zetasketch.HllplusUnique;
 import com.google.protos.zetasketch.HllplusUnique.HyperLogLogPlusUniqueStateProto;
 import com.google.zetasketch.ValueType;
 import com.google.zetasketch.internal.ByteSlice;
 import com.google.zetasketch.internal.GrowingByteSlice;
+import com.google.zetasketch.internal.hash.Hash;
+import com.google.zetasketch.internal.hash.DefaultHash;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import javax.annotation.Nullable;
@@ -70,6 +70,9 @@ public class State {
    * @see AggregatorStateProto#getValueType()
    */
   public ValueType valueType;
+
+
+  public Hash hash;
 
   /**
    * Size of sparse list, i.e., how many different indexes are present in {@link #sparseData}.
@@ -125,6 +128,7 @@ public class State {
     sparseSize = DEFAULT_SPARSE_SIZE;
     precision = DEFAULT_PRECISION_OR_NUM_BUCKETS;
     sparsePrecision = DEFAULT_SPARSE_PRECISION_OR_NUM_BUCKETS;
+    hash = DefaultHash.HASH;
     data = null;
     sparseData = null;
   }

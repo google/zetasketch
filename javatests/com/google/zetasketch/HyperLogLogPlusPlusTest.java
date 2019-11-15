@@ -16,6 +16,9 @@
 
 package com.google.zetasketch;
 
+import com.google.zetasketch.internal.hash.DefaultHash;
+import com.google.zetasketch.internal.hash.Hash;
+
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -34,6 +37,8 @@ import com.google.protos.zetasketch.HllplusUnique.HyperLogLogPlusUniqueStateProt
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+
 
 /**
  * Basic unit tests for {@link HyperLogLogPlusPlus}. More extensive testing is provided by the
@@ -1364,5 +1369,20 @@ public class HyperLogLogPlusPlusTest {
     assertEquals(1, stringAggregator.numValues());
     assertThat(stringAggregator.getNormalPrecision()).isEqualTo(18);
     assertThat(stringAggregator.getSparsePrecision()).isEqualTo(20);
+  }
+
+  @Test
+  public void customResult() {
+    ValueType valueType = ValueType.forNumber(1300);
+    HyperLogLogPlusPlus<Integer> aggregator = hllBuilder.buildCustom(valueType, DefaultHash.HASH);
+
+    aggregator.add(1);
+    aggregator.add(2);
+    aggregator.add(3);
+    aggregator.add(2);
+    aggregator.add(3);
+
+    assertEquals(3, aggregator.longResult());
+    assertEquals(aggregator.getValueType(), valueType);
   }
 }

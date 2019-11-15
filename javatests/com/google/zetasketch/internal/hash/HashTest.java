@@ -26,33 +26,35 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class HashTest {
 
+  private static Hash hash = DefaultHash.HASH;
+
   @Test
   public void ofBytes() {
 
-    assertEquals(0x23ad7c904aa665e3L, Hash.of(new byte[] {}));
-    assertEquals(0x36a1e57a138e4467L, Hash.of(new byte[] {0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}));
+    assertEquals(0x23ad7c904aa665e3L, hash.of(new byte[] {}));
+    assertEquals(0x36a1e57a138e4467L, hash.of(new byte[] {0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}));
   }
 
   @Test
   public void ofInt() {
-    assertEquals(0x1f6e43ff4b5270eeL, Hash.of(0));
-    assertEquals(0x5cbded943bffddd3L, Hash.of(42));
-    assertEquals(0xfd5a96b7669422c1L, Hash.of(-15));
+    assertEquals(0x1f6e43ff4b5270eeL, hash.of(0));
+    assertEquals(0x5cbded943bffddd3L, hash.of(42));
+    assertEquals(0xfd5a96b7669422c1L, hash.of(-15));
   }
 
   @Test
   public void ofLong() {
-    assertEquals(0x853a22bd6e14a48fL, Hash.of(0L));
-    assertEquals(0x583b2b9df8e0eb60L, Hash.of(42L));
-    assertEquals(0x539414f287f11e37L, Hash.of(-15L));
+    assertEquals(0x853a22bd6e14a48fL, hash.of(0L));
+    assertEquals(0x583b2b9df8e0eb60L, hash.of(42L));
+    assertEquals(0x539414f287f11e37L, hash.of(-15L));
   }
 
   @Test
   public void ofString() {
-    assertEquals(0x23ad7c904aa665e3L, Hash.of(""));
-    assertEquals(0xd0bcbfe261b36504L, Hash.of("foo"));
-    assertEquals(0x27efc00f7d2ce548L, Hash.of("Z\u00fcrich"));
+    assertEquals(0x23ad7c904aa665e3L, hash.of(""));
+    assertEquals(0xd0bcbfe261b36504L, hash.of("foo"));
+    assertEquals(0x27efc00f7d2ce548L, hash.of("Z\u00fcrich"));
     assertEquals(
-        "Unicode strings must not be normalized", 0x7dfa3067e55c7e8aL, Hash.of("Zu\u0308rich"));
+        "Unicode strings must not be normalized", 0x7dfa3067e55c7e8aL, hash.of("Zu\u0308rich"));
   }
 }
