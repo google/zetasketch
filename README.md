@@ -58,11 +58,11 @@ of distinct values in very large and small data streams.
 // You can also create sketches for estimating the number of unique byte
 // sequences, integers, and longs.
 
-HyperLogLogPlusPlus<String> hll = HyperLogLogPlusPlus.Builder().buildForStrings();
+HyperLogLogPlusPlus<String> hll = new HyperLogLogPlusPlus.Builder().buildForStrings();
 
 // You can also set a custom precision. The default normal and sparse precisions
 // are 15 and 20, respectively.
-HyperLogLogPlusPlus<String> hllCustomPrecision = HyperLogLogPlusPlus.Builder()
+HyperLogLogPlusPlus<String> hllCustomPrecision = new HyperLogLogPlusPlus.Builder()
     .normalPrecision(13).sparsePrecision(19).buildForStrings();
 ```
 
@@ -88,7 +88,7 @@ hll.merge(hll3);
 ### Extracting cardinality estimates
 
 ```java
-// Return the estimate of the number of disinct values.
+// Return the estimate of the number of distinct values.
 long result = hll.result();
 ```
 
