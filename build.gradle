@@ -26,16 +26,15 @@ plugins {
 sourceSets {
     main {
         java {
-            srcDirs = ['java']
-            exclude 'com/google/zetasketch/testing/**'
+            srcDirs = ['src/main/java']
         }
         proto {
-            srcDirs = ['proto']
+            srcDirs = ['src/main/proto']
         }
     }
     test {
         java {
-            srcDirs = ['java/com/google/zetasketch/testing', 'javatests']
+            srcDirs = ['src/test/java']
         }
     }
 }
