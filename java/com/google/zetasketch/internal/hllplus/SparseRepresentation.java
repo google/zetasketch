@@ -319,7 +319,7 @@ public class SparseRepresentation extends Representation {
     // ensure that the representation upgrades to normal just before the *serialized* sparse format
     // uses more memory than maxSparseDataBytes. I.e., we would be upgrading to normal
     // representation earlier than the golden tests.
-    if (state.sparseData != null && state.sparseData.remaining() > maxSparseDataBytes) {
+    if (state.sparseData != null && state.sparseData.remaining() >= maxSparseDataBytes) {
       return normalize();
     }
 

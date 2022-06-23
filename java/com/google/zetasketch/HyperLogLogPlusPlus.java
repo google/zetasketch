@@ -409,6 +409,7 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
      * <p>If not specified, the normal precision + {@link #DEFAULT_SPARSE_PRECISION_DELTA} is used.
      */
     public Builder sparsePrecision(int sparsePrecision) {
+      // TODO: Also validate sparse precision against MAXIMUM_SPARSE_PRECISION to fail early
       this.sparsePrecision = sparsePrecision;
       sparsePrecisionExplicitlySet = true;
       return this;
@@ -433,7 +434,8 @@ public final class HyperLogLogPlusPlus<V> implements Aggregator<V, Long, HyperLo
       state.sparsePrecision =
           sparsePrecisionExplicitlySet
               ? sparsePrecision
-              : normalPrecision + DEFAULT_SPARSE_PRECISION_DELTA;
+              : Math.min(
+                  normalPrecision + DEFAULT_SPARSE_PRECISION_DELTA, MAXIMUM_SPARSE_PRECISION);
 
       state.valueType = ValueType.forStandardType(opsType);
       return state;

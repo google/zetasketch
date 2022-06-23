@@ -167,20 +167,6 @@ public class State {
 
   /**
    * Parses a serialized HyperLogLog++ {@link AggregatorStateProto} and populates this object's
-   * fields. Note that {@link #data} and {@link #sparseData} will <em>alias</em> the given bytes
-   * &mdash; sharing the same memory.
-   *
-   * @throws IOException If the stream does not contain a serialized {@link AggregatorStateProto} or
-   *     if fields are set that would typically not belong
-   */
-  public void parse(byte[] bytes) throws IOException {
-    CodedInputStream stream = CodedInputStream.newInstance(bytes);
-    stream.enableAliasing(true);
-    parse(stream);
-  }
-
-  /**
-   * Parses a serialized HyperLogLog++ {@link AggregatorStateProto} and populates this object's
    * fields. If the {@code input} supports aliasing (for byte arrays and {@link ByteBuffer}, see
    * {@link CodedInputStream#enableAliasing(boolean) for details}), {@link #data} and {@link
    * #sparseData} will <em>alias</em> the given bytes &mdash; sharing the same memory.
@@ -188,6 +174,8 @@ public class State {
    * @throws IOException If the stream does not contain a serialized {@link AggregatorStateProto} or
    *     if fields are set that would typically not belong
    */
+  // incompatible types in assignment.
+  @SuppressWarnings("nullness:assignment.type.incompatible")
   public void parse(CodedInputStream input) throws IOException {
     // Reset defaults as values set to the default will not be encoded in the protocol buffer.
     clear();
@@ -305,6 +293,8 @@ public class State {
    * {@link AggregatorStateProto}, we limit ourselves to reading only the bytes of the specified
    * message length.
    */
+  // switching on a possibly-null value (HashAndValueType.forNumber(num))
+  @SuppressWarnings("nullness:switching.nullable")
   private void parseHll(CodedInputStream input, int size) throws IOException {
     int limit = input.getTotalBytesRead() + size;
 

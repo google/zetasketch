@@ -17,12 +17,12 @@
 package com.google.zetasketch;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Range;
-import com.google.common.truth.extensions.proto.ProtoTruth;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -309,7 +309,7 @@ public class HyperLogLogPlusPlusTest {
                     .buildForIntegers());
     assertThat(e)
         .hasMessageThat()
-        .isEqualTo("Expected normal precision to be >= 10 and <= 24 but was 25");
+        .isEqualTo("Expected normal precision to be >= 4 and <= 24 but was 25");
   }
 
   @Test
@@ -325,7 +325,7 @@ public class HyperLogLogPlusPlusTest {
                     .buildForIntegers());
     assertThat(e)
         .hasMessageThat()
-        .isEqualTo("Expected normal precision to be >= 10 and <= 24 but was 9");
+        .isEqualTo("Expected normal precision to be >= 4 and <= 24 but was 3");
   }
 
   @Test
@@ -342,7 +342,7 @@ public class HyperLogLogPlusPlusTest {
                         .build()));
     assertThat(e)
         .hasMessageThat()
-        .isEqualTo("Expected normal precision to be >= 10 and <= 24 but was 0");
+        .isEqualTo("Expected normal precision to be >= 4 and <= 24 but was 0");
   }
 
   @Test
@@ -366,7 +366,7 @@ public class HyperLogLogPlusPlusTest {
                         .build()));
     assertThat(e)
         .hasMessageThat()
-        .isEqualTo("Expected normal precision to be >= 10 and <= 24 but was 25");
+        .isEqualTo("Expected normal precision to be >= 4 and <= 24 but was 25");
   }
 
   @Test
@@ -384,13 +384,13 @@ public class HyperLogLogPlusPlusTest {
                                 .setExtension(
                                     HllplusUnique.hyperloglogplusUniqueState,
                                     HyperLogLogPlusUniqueStateProto.newBuilder()
-                                        .setPrecisionOrNumBuckets(9)
+                                        .setPrecisionOrNumBuckets(3)
                                         .build())
                                 .setNumValues(0))
                         .build()));
     assertThat(e)
         .hasMessageThat()
-        .isEqualTo("Expected normal precision to be >= 10 and <= 24 but was 9");
+        .isEqualTo("Expected normal precision to be >= 4 and <= 24 but was 3");
   }
 
   @Test
@@ -1116,7 +1116,7 @@ public class HyperLogLogPlusPlusTest {
         AggregatorStateProto.parseFrom(aggregator.serializeToByteArray(), EXTENSIONS);
 
     // Don't worry about the exact value for data, the golden tests cover that.
-    ProtoTruth.assertThat(
+    assertThat(
             ValueType.forStandardType(DefaultOpsType.Id.UINT32)
                 .copyToBuilder(
                     AggregatorStateProto.newBuilder()
@@ -1150,7 +1150,7 @@ public class HyperLogLogPlusPlusTest {
         AggregatorStateProto.parseFrom(aggregator.serializeToByteString(), EXTENSIONS);
 
     // Don't worry about the exact value for data, the golden tests cover that.
-    ProtoTruth.assertThat(
+    assertThat(
             ValueType.forStandardType(DefaultOpsType.Id.UINT32)
                 .copyToBuilder(
                     AggregatorStateProto.newBuilder()
@@ -1183,7 +1183,7 @@ public class HyperLogLogPlusPlusTest {
     AggregatorStateProto actual = aggregator.serializeToProto();
 
     // Don't worry about the exact value for data, the golden tests cover that.
-    ProtoTruth.assertThat(
+    assertThat(
             ValueType.forStandardType(DefaultOpsType.Id.UINT32)
                 .copyToBuilder(
                     AggregatorStateProto.newBuilder()
@@ -1243,6 +1243,82 @@ public class HyperLogLogPlusPlusTest {
     AggregatorStateProto actual = aggregator.serializeToProto();
     assertThat(ValueType.forStateProto(actual))
         .isEqualTo(ValueType.forStandardType(DefaultOpsType.Id.BYTES_OR_UTF8_STRING));
+  }
+
+  @Test
+  public void lowestPrecision_basicOps_normalOnly() {
+    HyperLogLogPlusPlus<Long> aggregator =
+        new HyperLogLogPlusPlus.Builder().normalPrecision(4).noSparseMode().buildForLongs();
+
+    assertThat(aggregator.getNormalPrecision()).isEqualTo(4);
+    assertThat(aggregator.getSparsePrecision()).isEqualTo(0);
+
+    aggregator.add(42L);
+
+    assertThat(aggregator.longResult()).isEqualTo(1);
+
+    AggregatorStateProto stateProto = aggregator.serializeToProto();
+    assertThat(stateProto)
+        .isEqualTo(
+            ValueType.forStandardType(DefaultOpsType.Id.UINT64)
+                .copyToBuilder(
+                    AggregatorStateProto.newBuilder()
+                        .setType(AggregatorType.HYPERLOGLOG_PLUS_UNIQUE)
+                        .setEncodingVersion(2)
+                        .setNumValues(1)
+                        .setExtension(
+                            HllplusUnique.hyperloglogplusUniqueState,
+                            HyperLogLogPlusUniqueStateProto.newBuilder()
+                                .setPrecisionOrNumBuckets(4)
+                                .setData(
+                                    ByteString.copyFrom(
+                                        new byte[] {
+                                          0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                                        }))
+                                .build()))
+                .build());
+
+    HyperLogLogPlusPlus<?> fromProto = HyperLogLogPlusPlus.forProto(stateProto);
+    assertThat(fromProto.getNormalPrecision()).isEqualTo(4);
+    assertThat(fromProto.getSparsePrecision()).isEqualTo(0);
+    assertThat(fromProto.longResult()).isEqualTo(1);
+  }
+
+  @Test
+  public void lowestPrecision_basicOps_withSparse() {
+    HyperLogLogPlusPlus<Long> aggregator =
+        new HyperLogLogPlusPlus.Builder().normalPrecision(4).sparsePrecision(4).buildForLongs();
+
+    assertThat(aggregator.getNormalPrecision()).isEqualTo(4);
+    assertThat(aggregator.getSparsePrecision()).isEqualTo(4);
+
+    aggregator.add(42L);
+
+    assertThat(aggregator.longResult()).isEqualTo(1);
+
+    AggregatorStateProto stateProto = aggregator.serializeToProto();
+    assertThat(stateProto)
+        .isEqualTo(
+            ValueType.forStandardType(DefaultOpsType.Id.UINT64)
+                .copyToBuilder(
+                    AggregatorStateProto.newBuilder()
+                        .setType(AggregatorType.HYPERLOGLOG_PLUS_UNIQUE)
+                        .setEncodingVersion(2)
+                        .setNumValues(1)
+                        .setExtension(
+                            HllplusUnique.hyperloglogplusUniqueState,
+                            HyperLogLogPlusUniqueStateProto.newBuilder()
+                                .setPrecisionOrNumBuckets(4)
+                                .setSparsePrecisionOrNumBuckets(4)
+                                .setSparseSize(1)
+                                .setSparseData(ByteString.copyFrom(new byte[] {-63, 10}))
+                                .build()))
+                .build());
+
+    HyperLogLogPlusPlus<?> fromProto = HyperLogLogPlusPlus.forProto(stateProto);
+    assertThat(fromProto.getNormalPrecision()).isEqualTo(4);
+    assertThat(fromProto.getSparsePrecision()).isEqualTo(4);
+    assertThat(fromProto.longResult()).isEqualTo(1);
   }
 
   @Test
@@ -1328,6 +1404,17 @@ public class HyperLogLogPlusPlusTest {
     assertThat(noSparseAggregator2.getSparsePrecision())
         .isEqualTo(HyperLogLogPlusPlus.SPARSE_PRECISION_DISABLED);
     assertThat(noSparseAggregator2.getNormalPrecision()).isEqualTo(16);
+  }
+
+  @Test
+  public void builder_defaultSparsePrecisionWithHighNormalPrecision_capsSparsePrecision() {
+    // Normal precision 22 would optimally lead to sparse precision 27 but the max sparse precision
+    // is only 25. This test verifies we adjust the default sparse precision correctly.
+    HyperLogLogPlusPlus<ByteString> aggregator =
+        new HyperLogLogPlusPlus.Builder().normalPrecision(22).buildForBytes();
+
+    assertThat(aggregator.getSparsePrecision()).isEqualTo(25);
+    assertThat(aggregator.getNormalPrecision()).isEqualTo(22);
   }
 
   @Test

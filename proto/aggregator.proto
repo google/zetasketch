@@ -52,6 +52,8 @@ option java_package = "com.google.protos.zetasketch";
 // Enumeration of all supported aggregation algorithms. Values should
 // start from 100.
 enum AggregatorType {
+  AGGREGATOR_TYPE_UNSPECIFIED = 0;
+
   // Sum all values added to the aggregator.
   SUM = 100;
 
@@ -72,48 +74,65 @@ message DefaultOpsType {
     UNKNOWN = 0;
 
     // int8, DefaultOps<int8>
-    // SerializeToString writes the single 2s-complement byte.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the string
+    // containing the single 2s-complement byte. SerializeToString writes the
+    // single 2s-complement byte.
     INT8 = 1 [(unsigned_counterpart) = UINT8];
 
     // int16, DefaultOps<int16>
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the little
+    // endian bytes of 2s complement representation.
     // SerializeToString writes the two little-endian 2s-complement bytes.
     INT16 = 2 [(unsigned_counterpart) = UINT16];
 
     // int32, DefaultOps<int32>
-    // SerializeToString uses varint encoding of the 2s complement in 32 bits -
-    // i.e. the result for negative integers is 5 bytes long, not 10.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the little
+    // endian bytes of 2s complement representation. SerializeToString uses
+    // varint encoding of the 2s complement in 32 bits - i.e. the result for
+    // negative integers is 5 bytes long, not 10.
     INT32 = 3 [(unsigned_counterpart) = UINT32];
 
     // int64, DefaultOps<int64>
-    // SerializeToString uses varint encoding of the 2s complement.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the little
+    // endian bytes of 2s complement representation. SerializeToString uses
+    // varint encoding of the 2s complement.
     INT64 = 4 [(unsigned_counterpart) = UINT64];
 
     // uint8, DefaultOps<uint8>
-    // SerializeToString writes the single byte.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the string
+    // containing the single byte. SerializeToString writes the single byte.
     UINT8 = 5;
 
     // uint16, DefaultOps<uint16>
-    // SerializeToString writes the two little-endian bytes.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the little
+    // endian bytes. SerializeToString writes the two little-endian bytes.
     UINT16 = 6;
 
     // uint32, DefaultOps<uint32>
-    // SerializeToString uses varint encoding.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the little
+    // endian bytes. SerializeToString uses varint encoding.
     UINT32 = 7;
 
     // uint64, DefaultOps<uint64>
-    // SerializeToString uses varint encoding.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the little
+    // endian bytes. SerializeToString uses varint encoding.
     UINT64 = 8;
 
     // float, DefaultOps<float>
-    // SerializeToString encodes the 4 little endian IEEE754 bytes.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the 4 little
+    // endian IEEE754 bytes. SerializeToString encodes the 4 little endian
+    // IEEE754 bytes.
     FLOAT = 9;
 
     // double, DefaultOps<double>
-    // SerializeToString encodes the 8 little endian IEEE754 bytes.
+    // Natural arithmetic operations. Hash is Fingerprint2011 of the 8
+    // little endian IEEE754 bytes. SerializeToString encodes the 8 little
+    // endian IEEE754 bytes.
     DOUBLE = 10;
 
     // string, DefaultOps<string>
-    // SerializeToString just copies the bytes.
+    // For unicode strings, the encoding is specified to be UTF-8. Hash is
+    // Fingerprint2011 of the bytes. SerializeToString just copies the bytes.
     BYTES_OR_UTF8_STRING = 11;
 
     reserved 12;

@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hasher;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.CheckReturnValue;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -31,7 +32,7 @@ import java.nio.ByteOrder;
  * @author Kevin Bourrillion
  * @author Dimitris Andreou
  */
-@CanIgnoreReturnValue
+@CheckReturnValue
 abstract class AbstractStreamingHasher extends AbstractHasher {
   /** Buffer via which we pass data to the hash algorithm (the implementor) */
   private final ByteBuffer buffer;
@@ -91,11 +92,13 @@ abstract class AbstractStreamingHasher extends AbstractHasher {
     process(bb);
   }
 
+  @CanIgnoreReturnValue
   @Override
   public final Hasher putBytes(byte[] bytes, int off, int len) {
     return putBytesInternal(ByteBuffer.wrap(bytes, off, len).order(ByteOrder.LITTLE_ENDIAN));
   }
 
+  @CanIgnoreReturnValue
   @Override
   public final Hasher putBytes(ByteBuffer readBuffer) {
     ByteOrder order = readBuffer.order();
@@ -107,6 +110,7 @@ abstract class AbstractStreamingHasher extends AbstractHasher {
     }
   }
 
+  @CanIgnoreReturnValue
   private Hasher putBytesInternal(ByteBuffer readBuffer) {
     // If we have room for all of it, this is easy
     if (readBuffer.remaining() <= buffer.remaining()) {
@@ -142,6 +146,7 @@ abstract class AbstractStreamingHasher extends AbstractHasher {
    * at least for commonly used charsets like UTF-8.
    */
 
+  @CanIgnoreReturnValue
   @Override
   public final Hasher putByte(byte b) {
     buffer.put(b);
@@ -149,6 +154,7 @@ abstract class AbstractStreamingHasher extends AbstractHasher {
     return this;
   }
 
+  @CanIgnoreReturnValue
   @Override
   public final Hasher putShort(short s) {
     buffer.putShort(s);
@@ -156,6 +162,7 @@ abstract class AbstractStreamingHasher extends AbstractHasher {
     return this;
   }
 
+  @CanIgnoreReturnValue
   @Override
   public final Hasher putChar(char c) {
     buffer.putChar(c);
@@ -163,6 +170,7 @@ abstract class AbstractStreamingHasher extends AbstractHasher {
     return this;
   }
 
+  @CanIgnoreReturnValue
   @Override
   public final Hasher putInt(int i) {
     buffer.putInt(i);
@@ -170,6 +178,7 @@ abstract class AbstractStreamingHasher extends AbstractHasher {
     return this;
   }
 
+  @CanIgnoreReturnValue
   @Override
   public final Hasher putLong(long l) {
     buffer.putLong(l);

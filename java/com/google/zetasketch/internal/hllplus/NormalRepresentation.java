@@ -30,7 +30,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 public class NormalRepresentation extends Representation {
 
   /** The smallest normal precision supported by this representation. */
-  public static final int MINIMUM_PRECISION = 10;
+  public static final int MINIMUM_PRECISION = 4;
 
   /** The largest normal precision supported by this representation. */
   public static final int MAXIMUM_PRECISION = 24;

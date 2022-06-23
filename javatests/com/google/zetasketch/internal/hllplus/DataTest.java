@@ -38,6 +38,7 @@ public class DataTest {
   @Test
   public void estimateBias_WhenExactlyDefined() {
     // Defined exactly in bias tables.
+    assertThat(Data.estimateBias(193.8044, 6)).isWithin(TOLERANCE).of(1.8044);
     assertThat(Data.estimateBias(738.1256, 10)).isWithin(TOLERANCE).of(737.1256);
     assertThat(Data.estimateBias(14573.7784, 14)).isWithin(TOLERANCE).of(9248.7784);
   }
@@ -45,7 +46,7 @@ public class DataTest {
   @Test
   public void estimateBias_WhenInterpolationNeeded() {
     // Interpolated results with values computed by hand starting with the empirical data tables
-    // from the HLL++ paper (https://goo.gl/pc916Z). For example, for the first value we get:
+    // from the HLL++ paper (https://goo.gl/pc916Z). For example, for the second value we get:
     //
     //   means   = [738.1256, 750.4234, 763.1064, 775.4732, 788.4636, 801.0644]
     //   biases  = [737.1256, 724.4234, 711.1064, 698.4732, 685.4636, 673.0644]
@@ -53,7 +54,9 @@ public class DataTest {
     //   bias    = sum(w*b for (w, b) in zip(weights, biases)) / sum(weights)
     //           = 736.4957464911646
     //
-    // We test interpolations on the left, in the center and on the right side of the bias tables.
+    // We test interpolations on the left (first two), in the center and on the right side of the
+    // bias tables.
+    assertThat(Data.estimateBias(25, 5)).isWithin(TOLERANCE).of(19.5258);
     assertThat(Data.estimateBias(1490, 11)).isWithin(TOLERANCE).of(1456.8144);
     assertThat(Data.estimateBias(16300, 14)).isWithin(TOLERANCE).of(8005.2257);
     assertThat(Data.estimateBias(653000, 17)).isWithin(TOLERANCE).of(-411.7805);
@@ -65,6 +68,7 @@ public class DataTest {
    */
   @Test
   public void estimateBias_ReturnsZeroWhenMeanOutOfRange() {
+    assertThat(Data.estimateBias(78, 4)).isWithin(TOLERANCE).of(0);
     assertThat(Data.estimateBias(738, 10)).isWithin(TOLERANCE).of(0);
     assertThat(Data.estimateBias(1310000, 18)).isWithin(TOLERANCE).of(0);
   }
@@ -77,6 +81,7 @@ public class DataTest {
 
   @Test
   public void linearCountingThreshold_WhenPreciselyDefined() {
+    assertThat(Data.linearCountingThreshold(7)).isEqualTo(80);
     assertThat(Data.linearCountingThreshold(14)).isEqualTo(11500);
   }
 
