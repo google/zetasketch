@@ -214,9 +214,11 @@ public final class GrowingByteSlice extends ByteSlice {
     // amortized O(N) instead of O(N^2).
     if (limit + arrayOffset > array.length) {
       int currentCapacity = array.length - arrayOffset;
-      int growthCapacity = Math.min(MAX_ARRAY_SIZE, (int) (currentCapacity * GROWTH_FACTOR));
+      int targetCapacity = (int) Math.max(currentCapacity * GROWTH_FACTOR, limit);
 
-      array = Arrays.copyOfRange(array, arrayOffset(), Math.max(growthCapacity, limit));
+      array =
+          Arrays.copyOfRange(
+              array, arrayOffset(), arrayOffset() + Math.min(targetCapacity, MAX_ARRAY_SIZE));
       arrayOffset = 0;
       copyOnWrite = false;
     }

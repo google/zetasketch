@@ -57,7 +57,7 @@ enum AggregatorType {
   // Sum all values added to the aggregator.
   SUM = 100;
 
-  reserved 0, 101 to 111, 113 to 140;
+  reserved 101 to 111, 113 to 140;
 
   // Computes a cardinality estimation using the HyperLogLog++ algorithm.
   HYPERLOGLOG_PLUS_UNIQUE = 112;

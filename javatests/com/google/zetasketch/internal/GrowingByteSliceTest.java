@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -282,5 +283,26 @@ public class GrowingByteSliceTest {
     assertThat(slice.array()).isNotSameInstanceAs(array);
     assertThat(slice.capacity()).isGreaterThan(6);
     assertEquals(6, slice.limit());
+  }
+
+  @Test
+  public void maybeExtendLimit_respectsOffset() {
+    // Reproducing test for https://github.com/google/zetasketch/issues/12
+    byte[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};
+    ByteBuffer offsetByteBuffer = ByteBuffer.wrap(array, 19, 2);
+    assertEquals(0, offsetByteBuffer.arrayOffset());
+
+    // This little dance seems necessary to create a ByteBuffer/ByteSlice with non-zero offset.
+    ByteBuffer bufferSlice = offsetByteBuffer.slice();
+    assertEquals(19, bufferSlice.arrayOffset());
+    ByteSlice slice = GrowingByteSlice.copyOnWrite(bufferSlice);
+
+    assertEquals(3, slice.capacity());
+    assertEquals(2, slice.limit());
+    int value = 421288982;
+    assertEquals(5, VarInt.varIntSize(value));
+    slice.putNextVarInt(value);
+    assertEquals(5, slice.capacity());
+    assertEquals(5, slice.limit());
   }
 }

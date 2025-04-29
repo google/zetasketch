@@ -18,24 +18,25 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'signing'
-    id 'com.github.johnrengelman.shadow' version '5.1.0'
-    id 'com.google.protobuf' version '0.8.9'
+    id 'com.gradleup.shadow' version '8.3.6'
+    id 'com.google.protobuf' version '0.9.4'
 }
 
 // Customize source code layout
 sourceSets {
     main {
-        java {
-            srcDirs = ['java']
-            exclude 'com/google/zetasketch/testing/**'
-        }
         proto {
-            srcDirs = ['proto']
+            srcDir 'proto'
+        }
+        java {
+            srcDir 'java'
+            exclude 'com/google/zetasketch/testing/**'
         }
     }
     test {
         java {
-            srcDirs = ['java/com/google/zetasketch/testing', 'javatests']
+            srcDir 'java/com/google/zetasketch/testing'
+            srcDir 'javatests'
         }
     }
 }
@@ -49,23 +50,23 @@ protobuf {
     // Configure the protoc executable
     protoc {
         // Download pre-compiled protoc
-        artifact = 'com.google.protobuf:protoc:3.6.0'
+        artifact = 'com.google.protobuf:protoc:4.30.0'
     }
 }
 
 // Configure the dependencies for production and test code
 dependencies {
-    annotationProcessor 'com.google.auto.value:auto-value:1.5.3'
-    compile 'com.google.auto.value:auto-value-annotations:1.6.3'
-    compile 'com.google.code.findbugs:jsr305:3.0.2'
-    compile 'com.google.errorprone:error_prone_annotations:2.3.2'
-    compile 'com.google.guava:guava:28.0-jre'
-    compile 'com.google.protobuf:protobuf-java:3.6.0'
-    compile 'it.unimi.dsi:fastutil:8.2.2'
-    compile 'org.checkerframework:checker-qual:2.8.1'
-    testCompile 'com.google.truth:truth:0.45'
-    testCompile 'com.google.truth.extensions:truth-proto-extension:0.45'
-    testCompile 'junit:junit:4.13-beta-1'
+    annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+    implementation 'com.google.auto.value:auto-value-annotations:1.11.0'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+    implementation 'com.google.errorprone:error_prone_annotations:2.14.0'
+    implementation 'com.google.guava:guava:33.0.0-jre'
+    implementation 'com.google.protobuf:protobuf-java:4.30.0'
+    implementation 'it.unimi.dsi:fastutil:8.2.2'
+    implementation 'org.checkerframework:checker-qual:3.30.0'
+    testImplementation 'com.google.truth:truth:1.4.4'
+    testImplementation 'com.google.truth.extensions:truth-proto-extension:1.4.4'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 // ----------------------------------------------------------------------------
@@ -90,8 +91,6 @@ shadowJar {
     relocate 'com.google.j2objc', shade('com.google.j2objc')
     relocate 'org.codehaus.mojo', shade('org.codehaus.mojo')
     relocate 'com.google.protobuf', shade('com.google.protobuf')
-
-    classifier = null  // was configured to 'all'
 }
 
 // The other dependencies are not shaded and will be included in pom.xml
