@@ -16,7 +16,8 @@
 
 package com.google.zetasketch.internal.hash;
 
-import com.google.common.hash.HashFunction;
+import static com.google.common.hash.Hashing.fingerprint2011;
+
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -28,26 +29,24 @@ import java.nio.charset.StandardCharsets;
  */
 public final class Hash {
 
-  private static final HashFunction FINGERPRINT_2011 = new Fingerprint2011();
-
   /** Returns the 64 bit hash of the byte array value. */
   public static long of(byte[] value) {
-    return FINGERPRINT_2011.hashBytes(value).asLong();
+    return fingerprint2011().hashBytes(value).asLong();
   }
 
   /** Returns the 64 bit hash of the integer value. */
   public static long of(int value) {
-    return FINGERPRINT_2011.hashInt(value).asLong();
+    return fingerprint2011().hashInt(value).asLong();
   }
 
   /** Returns the 64 bit hash of the long value. */
   public static long of(long value) {
-    return FINGERPRINT_2011.hashLong(value).asLong();
+    return fingerprint2011().hashLong(value).asLong();
   }
 
   /** Returns the 64 bit hash of the String value. */
   public static long of(String value) {
-    return FINGERPRINT_2011.hashString(value, StandardCharsets.UTF_8).asLong();
+    return fingerprint2011().hashString(value, StandardCharsets.UTF_8).asLong();
   }
 
   // Utility class.
