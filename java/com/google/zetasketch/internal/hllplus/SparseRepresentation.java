@@ -22,6 +22,7 @@ import com.google.zetasketch.internal.DifferenceDecoder;
 import com.google.zetasketch.internal.DifferenceEncoder;
 import com.google.zetasketch.internal.GrowingByteSlice;
 import com.google.zetasketch.internal.MergedIntIterator;
+import com.google.zetasketch.internal.ByteSlice;
 import it.unimi.dsi.fastutil.Hash;
 import it.unimi.dsi.fastutil.ints.IntCollection;
 import it.unimi.dsi.fastutil.ints.IntHash.Strategy;
@@ -274,7 +275,7 @@ public class SparseRepresentation extends Representation {
   protected Representation merge(SparseRepresentation other) {
     // TODO: Add special case when 'this' is empty and 'other' has only encoded data.
     // In that case, we can just copy over the sparse data without needing to decode and dedupe.
-    return this.addSparseValues(other.encoding, other.sortedIterator());
+    return this.addSparseValues(other.encoding, other.sortedIteratorForMerge());
   }
 
   /**
@@ -389,11 +390,38 @@ public class SparseRepresentation extends Representation {
     return a;
   }
 
+  /**
+   * Returns an iterator over the sorted (but not de-duplicated) values of the difference encoded
+   * data and the temporary buffer, or {@code null} if both are empty.
+   * here the difference actual values inside the difference encoded data is copied and consumed
+   */
+  private IntIterator sortedIteratorForMerge() {
+    IntIterator a = copyAndReadDataIterator();
+    IntIterator b = bufferIterator();  // same question applies here — see below
+
+    if (a != null && b != null) {
+      return new MergedIntIterator(a, b);
+    }
+    if (b != null) {
+      return b;
+    }
+    return a;
+  }
+
   /** Returns an iterator over the difference encoded data, or {@code null} if it is empty. */
   @Nullable
   private IntIterator dataIterator() {
     if (state.hasSparseData()) {
       return new DifferenceDecoder(state.sparseData);
+    }
+    return null;
+  }
+
+  /** a read only copy of sparseData which will not modify the original ByteSlice instance.
+   * Used in merge on other object. **/
+  private IntIterator copyAndReadDataIterator() {
+    if (state.sparseData != null && state.hasSparseData()) {
+      return new DifferenceDecoder(ByteSlice.copyOnWrite(state.sparseData));
     }
     return null;
   }
